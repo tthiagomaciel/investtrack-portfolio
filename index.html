@@ -250,6 +250,35 @@ body::before{content:'';position:fixed;top:-30%;right:-10%;width:55%;height:60%;
 .price-status.loading{color:var(--muted);background:var(--surface2)}
 .price-status.ok{color:var(--green);background:var(--green-bg)}
 .price-status.err{color:var(--red);background:var(--red-bg)}
+
+/* ============ PICKER MODAL ============ */
+.modal-picker{width:580px;max-height:80vh;padding:0;overflow:hidden;display:flex;flex-direction:column}
+.picker-head{padding:24px 24px 14px}
+.picker-search-wrap{padding:0 24px 10px}
+.picker-cats{display:flex;gap:5px;padding:0 24px 12px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+.picker-list-wrap{flex:1;overflow-y:auto;max-height:420px}
+.picker-list-wrap::-webkit-scrollbar{width:5px}
+.picker-list-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.picker-item{display:flex;align-items:center;gap:12px;padding:13px 24px;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.12s}
+.picker-item:last-child{border-bottom:none}
+.picker-item:hover{background:var(--surface2)}
+.picker-sym{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;letter-spacing:-0.3px}
+.picker-info{flex:1;min-width:0}
+.picker-info-name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.picker-info-meta{font-size:11px;color:var(--muted2);margin-top:2px}
+.picker-cat-badge{font-size:10px;color:var(--muted2);background:var(--surface);padding:2px 7px;border-radius:5px;flex-shrink:0}
+.picker-arrow{color:var(--muted2);font-size:20px;flex-shrink:0;line-height:1}
+.picker-empty{text-align:center;padding:48px 20px;color:var(--muted2);font-size:13px}
+/* ============ TX MODAL ============ */
+.tx-back-btn{width:32px;height:32px;border:none;background:var(--surface2);color:var(--muted);border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;font-size:20px;line-height:1}
+.tx-back-btn:hover{background:var(--surface3);color:var(--text)}
+.tx-type-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:20px}
+.tx-type-btn{padding:10px 6px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface2);cursor:pointer;font-size:12px;font-weight:600;color:var(--muted);font-family:var(--font-body);transition:all 0.15s;text-align:center}
+.tx-type-btn:hover{border-color:var(--border2);color:var(--text)}
+.tx-type-btn.active{border-color:var(--accent);background:rgba(240,165,0,0.1);color:var(--accent2)}
+.tx-total-box{background:var(--surface2);border:1px solid var(--border);border-radius:13px;padding:16px 20px;margin:14px 0;display:flex;justify-content:space-between;align-items:center}
+.tx-total-label{font-size:11px;color:var(--muted2);font-weight:600;text-transform:uppercase;letter-spacing:1px}
+.tx-total-val{font-family:var(--font-display);font-size:26px;font-weight:700;letter-spacing:-1px;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -342,7 +371,7 @@ body::before{content:'';position:fixed;top:-30%;right:-10%;width:55%;height:60%;
           <button class="tab" onclick="setTab('crypto',this)">Criptomonedas <span class="tab-count" id="count-crypto"></span></button>
           <button class="tab" onclick="setTab('stock',this)">Acciones <span class="tab-count" id="count-stock"></span></button>
         </div>
-        <button class="add-btn" onclick="openAddModal()">
+        <button class="add-btn" onclick="openPickerModal()">
           <span class="plus">+</span> Agregar transacción
         </button>
       </div>
@@ -365,83 +394,71 @@ body::before{content:'';position:fixed;top:-30%;right:-10%;width:55%;height:60%;
   </main>
 </div>
 
-<!-- ADD/EDIT ASSET MODAL -->
-<div class="modal-overlay" id="add-modal">
-  <div class="modal">
-    <div class="modal-head">
-      <div>
-        <div class="modal-title" id="add-modal-title">Agregar transacción</div>
-        <div class="modal-sub" id="add-modal-sub">Registrá una compra en tu portfolio</div>
+<!-- MODAL 1: PICKER DE ACTIVOS -->
+<div class="modal-overlay" id="picker-modal">
+  <div class="modal modal-picker">
+    <div class="picker-head">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div class="modal-title">Seleccionar activo</div>
+          <div class="modal-sub">Elegí el activo para tu transacción</div>
+        </div>
+        <button class="modal-close" onclick="closePickerModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
       </div>
-      <button class="modal-close" onclick="closeAddModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="picker-search-wrap">
+      <input type="text" class="form-input" id="picker-search" placeholder="Buscar por nombre o símbolo..." oninput="renderPickerList()" autocomplete="off" style="width:100%" />
+    </div>
+    <div class="picker-cats" id="picker-cats"></div>
+    <div class="picker-list-wrap" id="picker-list"></div>
+  </div>
+</div>
+
+<!-- MODAL 2: DETALLES DE TRANSACCIÓN -->
+<div class="modal-overlay" id="tx-modal">
+  <div class="modal">
+    <div class="modal-head" style="gap:10px">
+      <button class="tx-back-btn" onclick="backToPicker()">‹</button>
+      <div style="flex:1;min-width:0">
+        <div class="modal-title" id="tx-title">Agregar transacción</div>
+        <div class="modal-sub" id="tx-sub"></div>
+      </div>
+      <button class="modal-close" onclick="closeTxModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+
+    <div class="tx-type-row">
+      <button class="tx-type-btn active" onclick="setTxType('compra',this)">Compra</button>
+      <button class="tx-type-btn" onclick="setTxType('venta',this)">Venta</button>
+      <button class="tx-type-btn" onclick="setTxType('transaccion',this)">Transacción</button>
+      <button class="tx-type-btn" onclick="setTxType('rendimientos',this)">Rendimientos</button>
     </div>
 
     <div class="form-group">
-      <label class="form-label">Tipo de activo</label>
-      <div class="type-toggle">
-        <div class="type-opt active" data-type="crypto" onclick="selectType(this)">
-          <div class="type-opt-icon">₿</div>
-          <div class="type-opt-label">Criptomoneda</div>
-        </div>
-        <div class="type-opt" data-type="stock" onclick="selectType(this)">
-          <div class="type-opt-icon">📈</div>
-          <div class="type-opt-label">Acción</div>
-        </div>
-      </div>
+      <label class="form-label">Cantidad <span class="req">*</span></label>
+      <input type="number" class="form-input" id="tx-qty" placeholder="0.00000000" min="0" step="any" oninput="updateTxTotal()" />
     </div>
 
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Nombre <span class="req">*</span></label>
-        <div class="ac-wrap">
-          <input type="text" class="form-input" id="f-name" placeholder="Buscar o explorar activos..." oninput="onNameInput()" onfocus="onNameFocus()" autocomplete="off" />
-          <div class="ac-dropdown" id="ac-dropdown"></div>
-        </div>
+    <div class="form-group">
+      <label class="form-label">Precio (USD) <span class="req">*</span></label>
+      <div class="input-prefix"><span class="prefix">$</span>
+        <input type="number" class="form-input" id="tx-price" placeholder="0.00" min="0" step="any" oninput="updateTxTotal()" />
       </div>
-      <div class="form-group">
-        <label class="form-label">Símbolo <span class="req">*</span></label>
-        <input type="text" class="form-input" id="f-symbol" placeholder="Ej: BTC" oninput="updatePreview()" />
-      </div>
+      <div class="price-status" id="tx-price-status"></div>
     </div>
 
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Precio de compra (PPC) <span class="req">*</span></label>
-        <div class="input-prefix"><span class="prefix">$</span>
-          <input type="number" class="form-input" id="f-ppc" placeholder="0.00" min="0" step="any" oninput="updatePreview()" />
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Cantidad <span class="req">*</span></label>
-        <input type="number" class="form-input" id="f-qty" placeholder="0.00" min="0" step="any" oninput="updatePreview()" />
-      </div>
+    <div class="form-group">
+      <label class="form-label">Fecha</label>
+      <input type="date" class="form-input" id="tx-date" />
     </div>
 
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Precio actual <span class="req">*</span></label>
-        <div class="input-prefix"><span class="prefix">$</span>
-          <input type="number" class="form-input" id="f-price" placeholder="0.00" min="0" step="any" oninput="updatePreview()" />
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Variación 24h (%)</label>
-        <input type="number" class="form-input" id="f-change" placeholder="Ej: -2.5" step="any" />
-        <div class="field-hint">Negativo = rojo, positivo = verde</div>
-      </div>
-    </div>
-    <div class="price-status" id="price-status"></div>
-
-    <div class="preview-box" id="preview-box">
-      <div class="preview-label">Vista previa</div>
-      <div class="preview-row"><span class="pk">Invertido</span><span class="pv" id="pv-invested">$0.00</span></div>
-      <div class="preview-row"><span class="pk">Valor actual</span><span class="pv" id="pv-current">$0.00</span></div>
-      <div class="preview-row"><span class="pk">Ganancia / pérdida</span><span class="pv" id="pv-pnl">$0.00</span></div>
+    <div class="tx-total-box">
+      <div class="tx-total-label">Total invertido</div>
+      <div class="tx-total-val" id="tx-total">$0.00</div>
     </div>
 
     <div class="form-actions">
-      <button class="btn-cancel" onclick="closeAddModal()">Cancelar</button>
-      <button class="btn-submit" id="add-submit-btn" onclick="submitAsset()">Agregar activo</button>
+      <button class="btn-cancel" onclick="closeTxModal()">Cancelar</button>
+      <button class="btn-submit" id="tx-submit-btn" onclick="submitTx()">Confirmar transacción</button>
     </div>
   </div>
 </div>
@@ -764,88 +781,170 @@ function setRange(r,el){
   renderCharts();
 }
 
-/* ---------- add/edit asset modal ---------- */
-function selectType(el){
-  selectedType=el.dataset.type;
-  document.querySelectorAll('.type-opt').forEach(o=>o.classList.remove('active'));
-  el.classList.add('active');
+/* ---------- PICKER MODAL ---------- */
+let selectedPickerAsset = null;
+let currentTxType = 'compra';
+let pickerCat = 'all';
+let pickerItems = [];
+let editingTxIndex = null;
+
+function openPickerModal(){
+  pickerCat = 'all';
+  document.getElementById('picker-search').value = '';
+  renderPickerCats();
+  renderPickerList();
+  document.getElementById('picker-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('picker-search').focus(), 100);
 }
-function openAddModal(){
-  editingAssetIndex=null;
-  document.getElementById('add-modal-title').textContent='Agregar transacción';
-  document.getElementById('add-modal-sub').textContent='Registrá una compra en tu portfolio';
-  document.getElementById('add-submit-btn').textContent='Agregar activo';
-  selectedType='crypto';
-  document.querySelectorAll('.type-opt').forEach(o=>o.classList.toggle('active',o.dataset.type==='crypto'));
-  ['f-name','f-symbol','f-ppc','f-qty','f-price','f-change'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('preview-box').classList.remove('show');
-  document.getElementById('add-modal').classList.add('open');
-  setTimeout(()=>document.getElementById('f-name').focus(),100);
+function closePickerModal(){ document.getElementById('picker-modal').classList.remove('open'); }
+function renderPickerCats(){
+  const cats = ['all','Crypto','LECAP','Bono AR','Acción AR','CEDEar'];
+  document.getElementById('picker-cats').innerHTML = cats.map(c=>
+    `<button class="ac-filter-btn${pickerCat===c?' active':''}" onclick="setPickerCat('${c}')">${c==='all'?'Todos':c}</button>`
+  ).join('');
 }
-function openEditAsset(idx){
-  const p=getCurrentPortfolio();
-  const a=p.assets[idx];
-  if(!a)return;
-  editingAssetIndex=idx;
-  document.getElementById('add-modal-title').textContent='Editar activo';
-  document.getElementById('add-modal-sub').textContent='Modificá los datos de '+a.name;
-  document.getElementById('add-submit-btn').textContent='Guardar cambios';
-  selectedType=a.type;
-  document.querySelectorAll('.type-opt').forEach(o=>o.classList.toggle('active',o.dataset.type===a.type));
-  document.getElementById('f-name').value=a.name;
-  document.getElementById('f-symbol').value=a.symbol||'';
-  document.getElementById('f-ppc').value=a.ppc;
-  document.getElementById('f-qty').value=a.qty;
-  document.getElementById('f-price').value=a.price;
-  document.getElementById('f-change').value=a.change24h;
-  updatePreview();
-  document.getElementById('add-modal').classList.add('open');
+function setPickerCat(cat){ pickerCat=cat; renderPickerCats(); renderPickerList(); }
+function renderPickerList(){
+  const q = document.getElementById('picker-search').value.trim().toLowerCase();
+  let filtered = ASSETS_DB;
+  if(pickerCat !== 'all') filtered = filtered.filter(a=>a.cat===pickerCat);
+  if(q) filtered = filtered.filter(a=>a.name.toLowerCase().includes(q)||a.symbol.toLowerCase().includes(q));
+  pickerItems = filtered;
+  const list = document.getElementById('picker-list');
+  if(!pickerItems.length){ list.innerHTML='<div class="picker-empty">Sin resultados para esta búsqueda</div>'; return; }
+  list.innerHTML = pickerItems.map((a,i)=>{
+    const color = COLORS[i%COLORS.length];
+    return `<div class="picker-item" onclick="selectPickerAsset(${i})">
+      <div class="picker-sym" style="background:${color}22;color:${color}">${esc(a.symbol.slice(0,4))}</div>
+      <div class="picker-info">
+        <div class="picker-info-name">${esc(a.name)}</div>
+        <div class="picker-info-meta">${esc(a.symbol)} · ${esc(a.cat)}</div>
+      </div>
+      <span class="picker-arrow">›</span>
+    </div>`;
+  }).join('');
 }
-function closeAddModal(){document.getElementById('add-modal').classList.remove('open');}
-function updatePreview(){
-  const ppc=parseFloat(document.getElementById('f-ppc').value);
-  const qty=parseFloat(document.getElementById('f-qty').value);
-  const price=parseFloat(document.getElementById('f-price').value);
-  const box=document.getElementById('preview-box');
-  if(!isNaN(ppc)&&!isNaN(qty)&&!isNaN(price)&&qty>0){
-    const inv=ppc*qty, cur=price*qty, pnl=cur-inv;
-    document.getElementById('pv-invested').textContent=fmtUSD(inv);
-    document.getElementById('pv-current').textContent=fmtUSD(cur);
-    const pe=document.getElementById('pv-pnl');
-    pe.textContent=`${pnl>=0?'+':'−'}${fmtUSD(Math.abs(pnl)).replace('−','')} (${fmtPct(inv>0?pnl/inv*100:0)}%)`;
-    pe.className='pv '+(pnl>=0?'up':'down');
-    box.classList.add('show');
-  } else { box.classList.remove('show'); }
+function selectPickerAsset(idx){
+  selectedPickerAsset = pickerItems[idx];
+  editingTxIndex = null;
+  closePickerModal();
+  openTxModal();
 }
-function submitAsset(){
-  const name=document.getElementById('f-name').value.trim();
-  const symbol=document.getElementById('f-symbol').value.trim().toUpperCase();
-  const ppc=parseFloat(document.getElementById('f-ppc').value);
-  const qty=parseFloat(document.getElementById('f-qty').value);
-  const price=parseFloat(document.getElementById('f-price').value);
-  const change24h=parseFloat(document.getElementById('f-change').value)||0;
-  if(!name||!symbol||isNaN(ppc)||isNaN(qty)||isNaN(price)||qty<=0){
-    showToast('Completá nombre, símbolo, PPC, cantidad y precio actual.', true);return;
-  }
-  const p=getCurrentPortfolio();
-  if(editingAssetIndex!==null){
-    p.assets[editingAssetIndex]={name,symbol,type:selectedType,ppc,qty,price,change24h};
-    showToast('Activo actualizado');
+
+/* ---------- TX MODAL ---------- */
+function openTxModal(){
+  const a = selectedPickerAsset;
+  if(!a) return;
+  currentTxType = 'compra';
+  document.querySelectorAll('.tx-type-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
+  document.getElementById('tx-qty').value = '';
+  document.getElementById('tx-price').value = '';
+  document.getElementById('tx-total').textContent = '$0.00';
+  const statusEl = document.getElementById('tx-price-status');
+  statusEl.style.display = 'none'; statusEl.className = 'price-status';
+  document.getElementById('tx-title').textContent = editingTxIndex !== null
+    ? `Editar posición — ${a.name}`
+    : `Agregar transacción de ${a.name}`;
+  document.getElementById('tx-sub').textContent = `${a.symbol} · ${a.cat}`;
+  document.getElementById('tx-date').value = new Date().toISOString().split('T')[0];
+  if(editingTxIndex !== null){
+    const existing = getCurrentPortfolio().assets[editingTxIndex];
+    document.getElementById('tx-qty').value = existing.qty;
+    document.getElementById('tx-price').value = existing.ppc;
+    document.getElementById('tx-submit-btn').textContent = 'Guardar cambios';
+    updateTxTotal();
   } else {
-    const existing=p.assets.find(a=>a.symbol===symbol&&a.type===selectedType);
-    if(existing){
-      const totalQty=existing.qty+qty;
-      existing.ppc=(existing.ppc*existing.qty+ppc*qty)/totalQty;
-      existing.qty=totalQty;
-      existing.price=price; existing.change24h=change24h;
-      showToast(`${symbol} promediado en tu portfolio`);
+    document.getElementById('tx-submit-btn').textContent = 'Confirmar transacción';
+    fetchTxPrice(a);
+  }
+  document.getElementById('tx-modal').classList.add('open');
+}
+function closeTxModal(){ document.getElementById('tx-modal').classList.remove('open'); selectedPickerAsset=null; editingTxIndex=null; }
+function backToPicker(){ closeTxModal(); openPickerModal(); }
+function setTxType(type,btn){
+  currentTxType = type;
+  document.querySelectorAll('.tx-type-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function updateTxTotal(){
+  const qty = parseFloat(document.getElementById('tx-qty').value)||0;
+  const price = parseFloat(document.getElementById('tx-price').value)||0;
+  document.getElementById('tx-total').textContent = fmtUSD(qty*price);
+}
+
+let txStatusTimer;
+function setTxStatus(msg,cls){
+  const el = document.getElementById('tx-price-status');
+  el.textContent = msg; el.className = 'price-status '+cls; el.style.display = 'block';
+  clearTimeout(txStatusTimer);
+  if(cls!=='loading') txStatusTimer = setTimeout(()=>{ el.style.display='none'; },4000);
+}
+async function fetchTxPrice(item){
+  const priceIn = document.getElementById('tx-price');
+  const cgId = CG_IDS[item.symbol];
+  if(!cgId && item.cat!=='CEDEar') return;
+  priceIn.disabled = true;
+  try {
+    if(cgId){
+      setTxStatus('Obteniendo precio desde CoinGecko...','loading');
+      const data = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cgId}&vs_currencies=usd&include_24hr_change=true`).then(r=>r.json());
+      const info = data[cgId];
+      if(info?.usd){ priceIn.value=info.usd; setTxStatus('✓ Precio actualizado · CoinGecko','ok'); updateTxTotal(); }
+      else throw new Error();
     } else {
-      p.assets.push({name,symbol,type:selectedType,ppc,qty,price,change24h});
-      showToast(`${name} agregado`);
+      setTxStatus('Obteniendo precio desde Yahoo Finance...','loading');
+      const data = await fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${item.symbol}?interval=1d&range=1d`).then(r=>r.json());
+      const meta = data?.chart?.result?.[0]?.meta;
+      if(meta?.regularMarketPrice){ priceIn.value=meta.regularMarketPrice.toFixed(2); setTxStatus('✓ Precio actualizado · Yahoo Finance','ok'); updateTxTotal(); }
+      else throw new Error();
+    }
+  } catch(e){ setTxStatus('Precio no disponible — ingresalo manualmente','err'); }
+  finally { priceIn.disabled=false; }
+}
+function submitTx(){
+  const qty = parseFloat(document.getElementById('tx-qty').value);
+  const price = parseFloat(document.getElementById('tx-price').value);
+  const date = document.getElementById('tx-date').value;
+  const a = selectedPickerAsset;
+  if(!a||isNaN(qty)||qty<=0||isNaN(price)||price<=0){ showToast('Completá cantidad y precio para continuar.', true); return; }
+  const p = getCurrentPortfolio();
+  if(editingTxIndex !== null){
+    p.assets[editingTxIndex].qty = qty;
+    p.assets[editingTxIndex].ppc = price;
+    p.assets[editingTxIndex].date = date;
+    showToast('Posición actualizada');
+  } else if(currentTxType === 'venta'){
+    const existing = p.assets.find(x=>x.symbol===a.symbol&&x.type===a.type);
+    if(!existing){ showToast('No tenés ese activo en el portfolio.', true); return; }
+    existing.qty -= qty;
+    if(existing.qty <= 0.000000001){ p.assets = p.assets.filter(x=>!(x.symbol===a.symbol&&x.type===a.type)); showToast(`${a.symbol} liquidado del portfolio`); }
+    else { existing.price=price; showToast(`Venta de ${a.symbol} registrada`); }
+  } else {
+    const existing = p.assets.find(x=>x.symbol===a.symbol&&x.type===a.type);
+    const ppcEntry = currentTxType==='rendimientos' ? 0 : price;
+    if(existing){
+      const totalQty = existing.qty + qty;
+      existing.ppc = currentTxType==='rendimientos' ? existing.ppc : (existing.ppc*existing.qty + price*qty)/totalQty;
+      existing.qty = totalQty;
+      existing.price = price; existing.date = date;
+      showToast(`${a.symbol} actualizado`);
+    } else {
+      p.assets.push({name:a.name, symbol:a.symbol, type:a.type, cat:a.cat, ppc:ppcEntry, qty, price, change24h:0, date});
+      showToast(`${a.name} agregado al portfolio`);
     }
   }
-  save();closeAddModal();render();
+  save(); closeTxModal(); render();
 }
+
+function openEditAsset(idx){
+  const p = getCurrentPortfolio();
+  const a = p.assets[idx];
+  if(!a) return;
+  selectedPickerAsset = {name:a.name, symbol:a.symbol, type:a.type, cat:a.cat||(a.type==='crypto'?'Crypto':'CEDEar')};
+  editingTxIndex = idx;
+  openTxModal();
+}
+
 function deleteAsset(e,idx){
   e.stopPropagation();
   const p=getCurrentPortfolio();
@@ -933,7 +1032,7 @@ function showToast(msg,isError){
 }
 
 // close modals on overlay click / escape
-['add-modal','portfolio-modal'].forEach(id=>{
+['picker-modal','tx-modal','portfolio-modal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));});
@@ -1197,43 +1296,6 @@ const ASSETS_DB = [
   {name:'Silver ETF (SLV)',symbol:'SLV',type:'stock',cat:'CEDEar'},
 ];
 
-let acItems = [];
-let acFilter = 'all';
-
-function onNameFocus(){
-  renderACPicker(document.getElementById('f-name').value.trim());
-}
-function onNameInput(){
-  updatePreview();
-  renderACPicker(document.getElementById('f-name').value.trim());
-}
-function setACFilter(cat){
-  acFilter = cat;
-  renderACPicker(document.getElementById('f-name').value.trim());
-}
-function renderACPicker(q){
-  let filtered = ASSETS_DB;
-  if(acFilter !== 'all') filtered = filtered.filter(a => a.cat === acFilter);
-  if(q){
-    const ql = q.toLowerCase();
-    filtered = filtered.filter(a => a.name.toLowerCase().includes(ql) || a.symbol.toLowerCase().includes(ql));
-  }
-  acItems = filtered.slice(0, 50);
-  const cats = ['all','Crypto','LECAP','Bono AR','Acción AR','CEDEar'];
-  const dd = document.getElementById('ac-dropdown');
-  const filterHTML = `<div class="ac-filters">${cats.map(c =>
-    `<button class="ac-filter-btn${acFilter===c?' active':''}" onmousedown="event.preventDefault();setACFilter('${c}')">${c==='all'?'Todos':c}</button>`
-  ).join('')}</div>`;
-  const listHTML = acItems.length
-    ? acItems.map((a,i) => `<div class="ac-item" onmousedown="selectACItem(${i})">
-        <span class="ac-sym">${esc(a.symbol)}</span>
-        <span class="ac-name">${esc(a.name)}</span>
-        <span class="ac-cat">${esc(a.cat)}</span>
-      </div>`).join('')
-    : '<div class="ac-empty">Sin resultados para esta búsqueda</div>';
-  dd.innerHTML = filterHTML + `<div class="ac-list">${listHTML}</div>`;
-  dd.classList.add('open');
-}
 /* --- CoinGecko ID map (símbolo → id de la API) --- */
 const CG_IDS = {
   BTC:'bitcoin',ETH:'ethereum',USDT:'tether',BNB:'binancecoin',SOL:'solana',
@@ -1255,86 +1317,6 @@ const CG_IDS = {
   SNX:'havven',AGIX:'singularitynet',GALA:'gala',
 };
 
-let priceStatusTimer;
-function setPriceStatus(msg, cls){
-  const el = document.getElementById('price-status');
-  el.textContent = msg;
-  el.className = 'price-status ' + cls;
-  el.style.display = 'block';
-  clearTimeout(priceStatusTimer);
-  if(cls !== 'loading') priceStatusTimer = setTimeout(()=>{ el.style.display='none'; }, 4000);
-}
-
-async function fetchAssetPrice(item){
-  const priceIn = document.getElementById('f-price');
-  const changeIn = document.getElementById('f-change');
-  priceIn.value = ''; changeIn.value = '';
-  priceIn.disabled = true; changeIn.disabled = true;
-
-  try {
-    const cgId = CG_IDS[item.symbol];
-    if(cgId){
-      // Cripto → CoinGecko (gratuito, sin clave)
-      setPriceStatus('Obteniendo precio desde CoinGecko...', 'loading');
-      const url = `https://api.coingecko.com/api/v3/simple/price?ids=${cgId}&vs_currencies=usd&include_24hr_change=true`;
-      const data = await fetch(url).then(r => r.json());
-      const info = data[cgId];
-      if(info?.usd){
-        priceIn.value = info.usd;
-        changeIn.value = (info.usd_24h_change || 0).toFixed(2);
-        setPriceStatus('✓ Precio actualizado · CoinGecko', 'ok');
-        updatePreview();
-      } else throw new Error('sin datos');
-    } else if(item.cat === 'CEDEar'){
-      // CEDEar → Yahoo Finance (endpoint no oficial)
-      setPriceStatus('Obteniendo precio desde Yahoo Finance...', 'loading');
-      const url = `https://query2.finance.yahoo.com/v8/finance/chart/${item.symbol}?interval=1d&range=1d`;
-      const data = await fetch(url).then(r => r.json());
-      const meta = data?.chart?.result?.[0]?.meta;
-      if(meta?.regularMarketPrice){
-        priceIn.value = meta.regularMarketPrice.toFixed(2);
-        const prev = meta.chartPreviousClose || meta.regularMarketPreviousClose;
-        if(prev) changeIn.value = (((meta.regularMarketPrice - prev) / prev) * 100).toFixed(2);
-        setPriceStatus('✓ Precio actualizado · Yahoo Finance', 'ok');
-        updatePreview();
-      } else throw new Error('sin datos');
-    } else {
-      setPriceStatus('Precio no disponible automáticamente — ingresalo manualmente', 'err');
-    }
-  } catch(e){
-    const esCripto = !!CG_IDS[item.symbol];
-    setPriceStatus(
-      esCripto
-        ? '⚠ No se pudo obtener precio de CoinGecko — ingresalo manualmente'
-        : '⚠ Precio no disponible automáticamente — ingresalo manualmente',
-      'err'
-    );
-  } finally {
-    priceIn.disabled = false; changeIn.disabled = false;
-  }
-}
-
-function selectACItem(idx){
-  const item = acItems[idx];
-  if(!item) return;
-  document.getElementById('f-name').value = item.name;
-  document.getElementById('f-symbol').value = item.symbol;
-  selectedType = item.type;
-  document.querySelectorAll('.type-opt').forEach(o => o.classList.toggle('active', o.dataset.type === item.type));
-  closeACDropdown();
-  updatePreview();
-  // Fetch precio automático para criptos y CEDEars
-  if(CG_IDS[item.symbol] || item.cat === 'CEDEar'){
-    fetchAssetPrice(item);
-  } else {
-    setTimeout(() => document.getElementById('f-ppc').focus(), 50);
-  }
-}
-function closeACDropdown(){
-  document.getElementById('ac-dropdown').classList.remove('open');
-  acFilter = 'all';
-}
-document.getElementById('f-name').addEventListener('blur', () => setTimeout(closeACDropdown, 150));
 
 /* ---------- master render ---------- */
 function render(){
