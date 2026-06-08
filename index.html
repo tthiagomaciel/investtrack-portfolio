@@ -246,6 +246,10 @@ body::before{content:'';position:fixed;top:-30%;right:-10%;width:55%;height:60%;
 .ac-name{font-size:13px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
 .ac-cat{font-size:10px;color:var(--muted2);background:var(--surface);padding:2px 7px;border-radius:5px;white-space:nowrap;flex-shrink:0}
 .ac-empty{padding:22px;text-align:center;color:var(--muted2);font-size:13px}
+.price-status{font-size:11px;padding:6px 10px;border-radius:7px;margin-top:6px;font-weight:500;display:none}
+.price-status.loading{color:var(--muted);background:var(--surface2)}
+.price-status.ok{color:var(--green);background:var(--green-bg)}
+.price-status.err{color:var(--red);background:var(--red-bg)}
 </style>
 </head>
 <body>
@@ -426,6 +430,7 @@ body::before{content:'';position:fixed;top:-30%;right:-10%;width:55%;height:60%;
         <div class="field-hint">Negativo = rojo, positivo = verde</div>
       </div>
     </div>
+    <div class="price-status" id="price-status"></div>
 
     <div class="preview-box" id="preview-box">
       <div class="preview-label">Vista previa</div>
@@ -1229,6 +1234,86 @@ function renderACPicker(q){
   dd.innerHTML = filterHTML + `<div class="ac-list">${listHTML}</div>`;
   dd.classList.add('open');
 }
+/* --- CoinGecko ID map (símbolo → id de la API) --- */
+const CG_IDS = {
+  BTC:'bitcoin',ETH:'ethereum',USDT:'tether',BNB:'binancecoin',SOL:'solana',
+  XRP:'ripple',USDC:'usd-coin',ADA:'cardano',AVAX:'avalanche-2',DOGE:'dogecoin',
+  TRX:'tron',TON:'the-open-network',DOT:'polkadot',MATIC:'matic-network',
+  LINK:'chainlink',SHIB:'shiba-inu',DAI:'dai',LTC:'litecoin',BCH:'bitcoin-cash',
+  ATOM:'cosmos',UNI:'uniswap',XMR:'monero',ETC:'ethereum-classic',XLM:'stellar',
+  ICP:'internet-computer',NEAR:'near',APT:'aptos',OP:'optimism',ARB:'arbitrum',
+  HBAR:'hedera-hashgraph',FIL:'filecoin',VET:'vechain',ALGO:'algorand',
+  GRT:'the-graph',FTM:'fantom',EGLD:'elrond-erd-2',MKR:'maker',AAVE:'aave',
+  LDO:'lido-dao',RNDR:'render-token',FET:'fetch-ai',INJ:'injective-protocol',
+  SEI:'sei-network',TIA:'celestia',SUI:'sui',PEPE:'pepe',FLOKI:'floki',
+  WIF:'dogwifcoin',BONK:'bonk',STX:'blockstack',APE:'apecoin',AXS:'axie-infinity',
+  SAND:'the-sandbox',MANA:'decentraland',CHZ:'chiliz',ENJ:'enjincoin',
+  WBTC:'wrapped-bitcoin',PAXG:'pax-gold',ZEC:'zcash',DASH:'dash',EOS:'eos',
+  XTZ:'tezos',THETA:'theta-token',IMX:'immutable-x',BLUR:'blur',ORDI:'ordinals',
+  WLD:'worldcoin-wld',PYTH:'pyth-network',JUP:'jupiter-exchange-solana',
+  W:'wormhole',PENDLE:'pendle',CRV:'curve-dao-token',COMP:'compound-governance-token',
+  SNX:'havven',AGIX:'singularitynet',GALA:'gala',
+};
+
+let priceStatusTimer;
+function setPriceStatus(msg, cls){
+  const el = document.getElementById('price-status');
+  el.textContent = msg;
+  el.className = 'price-status ' + cls;
+  el.style.display = 'block';
+  clearTimeout(priceStatusTimer);
+  if(cls !== 'loading') priceStatusTimer = setTimeout(()=>{ el.style.display='none'; }, 4000);
+}
+
+async function fetchAssetPrice(item){
+  const priceIn = document.getElementById('f-price');
+  const changeIn = document.getElementById('f-change');
+  priceIn.value = ''; changeIn.value = '';
+  priceIn.disabled = true; changeIn.disabled = true;
+
+  try {
+    const cgId = CG_IDS[item.symbol];
+    if(cgId){
+      // Cripto → CoinGecko (gratuito, sin clave)
+      setPriceStatus('Obteniendo precio desde CoinGecko...', 'loading');
+      const url = `https://api.coingecko.com/api/v3/simple/price?ids=${cgId}&vs_currencies=usd&include_24hr_change=true`;
+      const data = await fetch(url).then(r => r.json());
+      const info = data[cgId];
+      if(info?.usd){
+        priceIn.value = info.usd;
+        changeIn.value = (info.usd_24h_change || 0).toFixed(2);
+        setPriceStatus('✓ Precio actualizado · CoinGecko', 'ok');
+        updatePreview();
+      } else throw new Error('sin datos');
+    } else if(item.cat === 'CEDEar'){
+      // CEDEar → Yahoo Finance (endpoint no oficial)
+      setPriceStatus('Obteniendo precio desde Yahoo Finance...', 'loading');
+      const url = `https://query2.finance.yahoo.com/v8/finance/chart/${item.symbol}?interval=1d&range=1d`;
+      const data = await fetch(url).then(r => r.json());
+      const meta = data?.chart?.result?.[0]?.meta;
+      if(meta?.regularMarketPrice){
+        priceIn.value = meta.regularMarketPrice.toFixed(2);
+        const prev = meta.chartPreviousClose || meta.regularMarketPreviousClose;
+        if(prev) changeIn.value = (((meta.regularMarketPrice - prev) / prev) * 100).toFixed(2);
+        setPriceStatus('✓ Precio actualizado · Yahoo Finance', 'ok');
+        updatePreview();
+      } else throw new Error('sin datos');
+    } else {
+      setPriceStatus('Precio no disponible automáticamente — ingresalo manualmente', 'err');
+    }
+  } catch(e){
+    const esCripto = !!CG_IDS[item.symbol];
+    setPriceStatus(
+      esCripto
+        ? '⚠ No se pudo obtener precio de CoinGecko — ingresalo manualmente'
+        : '⚠ Precio no disponible automáticamente — ingresalo manualmente',
+      'err'
+    );
+  } finally {
+    priceIn.disabled = false; changeIn.disabled = false;
+  }
+}
+
 function selectACItem(idx){
   const item = acItems[idx];
   if(!item) return;
@@ -1238,7 +1323,12 @@ function selectACItem(idx){
   document.querySelectorAll('.type-opt').forEach(o => o.classList.toggle('active', o.dataset.type === item.type));
   closeACDropdown();
   updatePreview();
-  setTimeout(() => document.getElementById('f-ppc').focus(), 50);
+  // Fetch precio automático para criptos y CEDEars
+  if(CG_IDS[item.symbol] || item.cat === 'CEDEar'){
+    fetchAssetPrice(item);
+  } else {
+    setTimeout(() => document.getElementById('f-ppc').focus(), 50);
+  }
 }
 function closeACDropdown(){
   document.getElementById('ac-dropdown').classList.remove('open');
