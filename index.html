@@ -228,18 +228,24 @@ body::before{content:'';position:fixed;top:-30%;right:-10%;width:55%;height:60%;
   .main-inner{padding:22px 18px}
 }
 
-/* ============ AUTOCOMPLETE ============ */
+/* ============ AUTOCOMPLETE / ASSET PICKER ============ */
 .ac-wrap{position:relative}
-.ac-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface3);border:1px solid var(--border2);border-radius:10px;z-index:9999;max-height:260px;overflow-y:auto;box-shadow:0 8px 28px rgba(0,0,0,0.5);display:none}
+.ac-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface3);border:1px solid var(--border2);border-radius:12px;z-index:9999;overflow:hidden;box-shadow:0 10px 36px rgba(0,0,0,0.6);display:none}
 .ac-dropdown.open{display:block}
-.ac-dropdown::-webkit-scrollbar{width:5px}
-.ac-dropdown::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.ac-filters{display:flex;gap:5px;padding:9px 11px;border-bottom:1px solid var(--border);flex-wrap:wrap;background:var(--surface3)}
+.ac-filter-btn{padding:4px 11px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font-body);transition:all 0.12s;white-space:nowrap}
+.ac-filter-btn.active{background:var(--accent);color:#0a0c11;border-color:var(--accent)}
+.ac-filter-btn:hover:not(.active){border-color:var(--muted2);color:var(--text)}
+.ac-list{overflow-y:auto;max-height:260px}
+.ac-list::-webkit-scrollbar{width:5px}
+.ac-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 .ac-item{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background 0.1s;border-bottom:1px solid var(--border)}
 .ac-item:last-child{border-bottom:none}
-.ac-item:hover,.ac-item.focused{background:var(--surface2)}
-.ac-sym{font-size:12px;font-weight:700;color:var(--accent2);min-width:54px;font-variant-numeric:tabular-nums}
+.ac-item:hover{background:var(--surface2)}
+.ac-sym{font-size:12px;font-weight:700;color:var(--accent2);min-width:58px;font-variant-numeric:tabular-nums}
 .ac-name{font-size:13px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
 .ac-cat{font-size:10px;color:var(--muted2);background:var(--surface);padding:2px 7px;border-radius:5px;white-space:nowrap;flex-shrink:0}
+.ac-empty{padding:22px;text-align:center;color:var(--muted2);font-size:13px}
 </style>
 </head>
 <body>
@@ -384,7 +390,7 @@ body::before{content:'';position:fixed;top:-30%;right:-10%;width:55%;height:60%;
       <div class="form-group">
         <label class="form-label">Nombre <span class="req">*</span></label>
         <div class="ac-wrap">
-          <input type="text" class="form-input" id="f-name" placeholder="Buscar por nombre o símbolo..." oninput="onNameInput()" autocomplete="off" />
+          <input type="text" class="form-input" id="f-name" placeholder="Buscar o explorar activos..." oninput="onNameInput()" onfocus="onNameFocus()" autocomplete="off" />
           <div class="ac-dropdown" id="ac-dropdown"></div>
         </div>
       </div>
@@ -928,10 +934,10 @@ function showToast(msg,isError){
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));});
 
 /* ============================================================
-   ASSETS DATABASE — autocomplete
+   ASSETS DATABASE — 260+ activos del mercado
    ============================================================ */
 const ASSETS_DB = [
-  // === CRIPTOMONEDAS ===
+  // === CRIPTOMONEDAS (75) ===
   {name:'Bitcoin',symbol:'BTC',type:'crypto',cat:'Crypto'},
   {name:'Ethereum',symbol:'ETH',type:'crypto',cat:'Crypto'},
   {name:'Tether',symbol:'USDT',type:'crypto',cat:'Crypto'},
@@ -942,32 +948,73 @@ const ASSETS_DB = [
   {name:'Cardano',symbol:'ADA',type:'crypto',cat:'Crypto'},
   {name:'Avalanche',symbol:'AVAX',type:'crypto',cat:'Crypto'},
   {name:'Dogecoin',symbol:'DOGE',type:'crypto',cat:'Crypto'},
+  {name:'TRON',symbol:'TRX',type:'crypto',cat:'Crypto'},
+  {name:'Toncoin',symbol:'TON',type:'crypto',cat:'Crypto'},
   {name:'Polkadot',symbol:'DOT',type:'crypto',cat:'Crypto'},
   {name:'Polygon',symbol:'MATIC',type:'crypto',cat:'Crypto'},
   {name:'Chainlink',symbol:'LINK',type:'crypto',cat:'Crypto'},
-  {name:'Uniswap',symbol:'UNI',type:'crypto',cat:'Crypto'},
+  {name:'Shiba Inu',symbol:'SHIB',type:'crypto',cat:'Crypto'},
+  {name:'Dai',symbol:'DAI',type:'crypto',cat:'Crypto'},
   {name:'Litecoin',symbol:'LTC',type:'crypto',cat:'Crypto'},
-  {name:'Stellar',symbol:'XLM',type:'crypto',cat:'Crypto'},
-  {name:'TRON',symbol:'TRX',type:'crypto',cat:'Crypto'},
+  {name:'Bitcoin Cash',symbol:'BCH',type:'crypto',cat:'Crypto'},
   {name:'Cosmos',symbol:'ATOM',type:'crypto',cat:'Crypto'},
+  {name:'Uniswap',symbol:'UNI',type:'crypto',cat:'Crypto'},
+  {name:'Monero',symbol:'XMR',type:'crypto',cat:'Crypto'},
+  {name:'Ethereum Classic',symbol:'ETC',type:'crypto',cat:'Crypto'},
+  {name:'Stellar',symbol:'XLM',type:'crypto',cat:'Crypto'},
+  {name:'Internet Computer',symbol:'ICP',type:'crypto',cat:'Crypto'},
   {name:'Near Protocol',symbol:'NEAR',type:'crypto',cat:'Crypto'},
   {name:'Aptos',symbol:'APT',type:'crypto',cat:'Crypto'},
-  {name:'Arbitrum',symbol:'ARB',type:'crypto',cat:'Crypto'},
   {name:'Optimism',symbol:'OP',type:'crypto',cat:'Crypto'},
-  {name:'Sui',symbol:'SUI',type:'crypto',cat:'Crypto'},
-  {name:'Pepe',symbol:'PEPE',type:'crypto',cat:'Crypto'},
-  {name:'Dai',symbol:'DAI',type:'crypto',cat:'Crypto'},
-  {name:'Shiba Inu',symbol:'SHIB',type:'crypto',cat:'Crypto'},
-  {name:'Aave',symbol:'AAVE',type:'crypto',cat:'Crypto'},
-  {name:'Maker',symbol:'MKR',type:'crypto',cat:'Crypto'},
-  {name:'Monero',symbol:'XMR',type:'crypto',cat:'Crypto'},
+  {name:'Arbitrum',symbol:'ARB',type:'crypto',cat:'Crypto'},
+  {name:'Hedera',symbol:'HBAR',type:'crypto',cat:'Crypto'},
+  {name:'Filecoin',symbol:'FIL',type:'crypto',cat:'Crypto'},
+  {name:'VeChain',symbol:'VET',type:'crypto',cat:'Crypto'},
   {name:'Algorand',symbol:'ALGO',type:'crypto',cat:'Crypto'},
+  {name:'The Graph',symbol:'GRT',type:'crypto',cat:'Crypto'},
+  {name:'Fantom',symbol:'FTM',type:'crypto',cat:'Crypto'},
+  {name:'MultiversX',symbol:'EGLD',type:'crypto',cat:'Crypto'},
+  {name:'Maker',symbol:'MKR',type:'crypto',cat:'Crypto'},
+  {name:'Aave',symbol:'AAVE',type:'crypto',cat:'Crypto'},
+  {name:'Lido DAO',symbol:'LDO',type:'crypto',cat:'Crypto'},
   {name:'Render',symbol:'RNDR',type:'crypto',cat:'Crypto'},
+  {name:'Fetch.ai',symbol:'FET',type:'crypto',cat:'Crypto'},
   {name:'Injective',symbol:'INJ',type:'crypto',cat:'Crypto'},
   {name:'Sei',symbol:'SEI',type:'crypto',cat:'Crypto'},
   {name:'Celestia',symbol:'TIA',type:'crypto',cat:'Crypto'},
-  {name:'Fantom',symbol:'FTM',type:'crypto',cat:'Crypto'},
-  // === LECAPs ===
+  {name:'Sui',symbol:'SUI',type:'crypto',cat:'Crypto'},
+  {name:'Pepe',symbol:'PEPE',type:'crypto',cat:'Crypto'},
+  {name:'Floki',symbol:'FLOKI',type:'crypto',cat:'Crypto'},
+  {name:'dogwifhat',symbol:'WIF',type:'crypto',cat:'Crypto'},
+  {name:'Bonk',symbol:'BONK',type:'crypto',cat:'Crypto'},
+  {name:'Stacks',symbol:'STX',type:'crypto',cat:'Crypto'},
+  {name:'ApeCoin',symbol:'APE',type:'crypto',cat:'Crypto'},
+  {name:'Axie Infinity',symbol:'AXS',type:'crypto',cat:'Crypto'},
+  {name:'The Sandbox',symbol:'SAND',type:'crypto',cat:'Crypto'},
+  {name:'Decentraland',symbol:'MANA',type:'crypto',cat:'Crypto'},
+  {name:'Chiliz',symbol:'CHZ',type:'crypto',cat:'Crypto'},
+  {name:'Enjin Coin',symbol:'ENJ',type:'crypto',cat:'Crypto'},
+  {name:'Wrapped Bitcoin',symbol:'WBTC',type:'crypto',cat:'Crypto'},
+  {name:'PAX Gold',symbol:'PAXG',type:'crypto',cat:'Crypto'},
+  {name:'Zcash',symbol:'ZEC',type:'crypto',cat:'Crypto'},
+  {name:'Dash',symbol:'DASH',type:'crypto',cat:'Crypto'},
+  {name:'EOS',symbol:'EOS',type:'crypto',cat:'Crypto'},
+  {name:'Tezos',symbol:'XTZ',type:'crypto',cat:'Crypto'},
+  {name:'Theta Network',symbol:'THETA',type:'crypto',cat:'Crypto'},
+  {name:'Immutable',symbol:'IMX',type:'crypto',cat:'Crypto'},
+  {name:'Blur',symbol:'BLUR',type:'crypto',cat:'Crypto'},
+  {name:'Ordinals',symbol:'ORDI',type:'crypto',cat:'Crypto'},
+  {name:'Worldcoin',symbol:'WLD',type:'crypto',cat:'Crypto'},
+  {name:'Pyth Network',symbol:'PYTH',type:'crypto',cat:'Crypto'},
+  {name:'Jupiter',symbol:'JUP',type:'crypto',cat:'Crypto'},
+  {name:'Wormhole',symbol:'W',type:'crypto',cat:'Crypto'},
+  {name:'Pendle',symbol:'PENDLE',type:'crypto',cat:'Crypto'},
+  {name:'Curve',symbol:'CRV',type:'crypto',cat:'Crypto'},
+  {name:'Compound',symbol:'COMP',type:'crypto',cat:'Crypto'},
+  {name:'Synthetix',symbol:'SNX',type:'crypto',cat:'Crypto'},
+  {name:'SingularityNET',symbol:'AGIX',type:'crypto',cat:'Crypto'},
+  {name:'Gala',symbol:'GALA',type:'crypto',cat:'Crypto'},
+  // === LECAPs (18) ===
   {name:'LECAP Ene 2025',symbol:'S31E5',type:'stock',cat:'LECAP'},
   {name:'LECAP Feb 2025',symbol:'S28F5',type:'stock',cat:'LECAP'},
   {name:'LECAP Mar 2025',symbol:'S31M5',type:'stock',cat:'LECAP'},
@@ -980,30 +1027,46 @@ const ASSETS_DB = [
   {name:'LECAP Oct 2025',symbol:'S31O5',type:'stock',cat:'LECAP'},
   {name:'LECAP Nov 2025',symbol:'S28N5',type:'stock',cat:'LECAP'},
   {name:'LECAP Dic 2025',symbol:'S31D5',type:'stock',cat:'LECAP'},
+  {name:'LECAP Ene 2026',symbol:'S30E6',type:'stock',cat:'LECAP'},
+  {name:'LECAP Feb 2026',symbol:'S27F6',type:'stock',cat:'LECAP'},
+  {name:'LECAP Mar 2026',symbol:'S31M6',type:'stock',cat:'LECAP'},
   {name:'LECAP Jun 2026',symbol:'S30J6',type:'stock',cat:'LECAP'},
+  {name:'LECAP Sep 2026',symbol:'S30S6',type:'stock',cat:'LECAP'},
   {name:'LECAP Dic 2026',symbol:'S31D6',type:'stock',cat:'LECAP'},
-  // === BONOS ARGENTINOS ===
-  {name:'Bono AL 2029',symbol:'AL29',type:'stock',cat:'Bono AR'},
-  {name:'Bono AL 2030',symbol:'AL30',type:'stock',cat:'Bono AR'},
-  {name:'Bono AL 2035',symbol:'AL35',type:'stock',cat:'Bono AR'},
-  {name:'Bono AL 2041',symbol:'AL41',type:'stock',cat:'Bono AR'},
-  {name:'Global GD 2029',symbol:'GD29',type:'stock',cat:'Bono AR'},
-  {name:'Global GD 2030',symbol:'GD30',type:'stock',cat:'Bono AR'},
-  {name:'Global GD 2035',symbol:'GD35',type:'stock',cat:'Bono AR'},
-  {name:'Global GD 2038',symbol:'GD38',type:'stock',cat:'Bono AR'},
-  {name:'Global GD 2041',symbol:'GD41',type:'stock',cat:'Bono AR'},
-  {name:'Global GD 2046',symbol:'GD46',type:'stock',cat:'Bono AR'},
-  {name:'Bono AE 2038',symbol:'AE38',type:'stock',cat:'Bono AR'},
-  {name:'Bono CER TX26',symbol:'TX26',type:'stock',cat:'Bono AR'},
-  {name:'Bono CER TX28',symbol:'TX28',type:'stock',cat:'Bono AR'},
-  {name:'Bono Dual TZX26',symbol:'TZX26',type:'stock',cat:'Bono AR'},
-  {name:'BOPREAL BPY26',symbol:'BPY26',type:'stock',cat:'Bono AR'},
-  {name:'BOPREAL BPD27',symbol:'BPD27',type:'stock',cat:'Bono AR'},
-  // === ACCIONES ARGENTINAS ===
+  // === BONOS ARGENTINOS (26) ===
+  {name:'Bono AL 2029 (Ley AR)',symbol:'AL29',type:'stock',cat:'Bono AR'},
+  {name:'Bono AL 2030 (Ley AR)',symbol:'AL30',type:'stock',cat:'Bono AR'},
+  {name:'Bono AL 2035 (Ley AR)',symbol:'AL35',type:'stock',cat:'Bono AR'},
+  {name:'Bono AL 2041 (Ley AR)',symbol:'AL41',type:'stock',cat:'Bono AR'},
+  {name:'Global GD 2029 (Ley NY)',symbol:'GD29',type:'stock',cat:'Bono AR'},
+  {name:'Global GD 2030 (Ley NY)',symbol:'GD30',type:'stock',cat:'Bono AR'},
+  {name:'Global GD 2035 (Ley NY)',symbol:'GD35',type:'stock',cat:'Bono AR'},
+  {name:'Global GD 2038 (Ley NY)',symbol:'GD38',type:'stock',cat:'Bono AR'},
+  {name:'Global GD 2041 (Ley NY)',symbol:'GD41',type:'stock',cat:'Bono AR'},
+  {name:'Global GD 2046 (Ley NY)',symbol:'GD46',type:'stock',cat:'Bono AR'},
+  {name:'Bono AE 2038 (EUR)',symbol:'AE38',type:'stock',cat:'Bono AR'},
+  {name:'Boncer TX 2026 (CER)',symbol:'TX26',type:'stock',cat:'Bono AR'},
+  {name:'Boncer TX 2028 (CER)',symbol:'TX28',type:'stock',cat:'Bono AR'},
+  {name:'Discount en Pesos (DICP)',symbol:'DICP',type:'stock',cat:'Bono AR'},
+  {name:'Par en Pesos (PARP)',symbol:'PARP',type:'stock',cat:'Bono AR'},
+  {name:'Cuasipar (CUAP)',symbol:'CUAP',type:'stock',cat:'Bono AR'},
+  {name:'Bono Dual TZX 2026',symbol:'TZX26',type:'stock',cat:'Bono AR'},
+  {name:'Bono Dollar Linked TV25',symbol:'TV25',type:'stock',cat:'Bono AR'},
+  {name:'BOPREAL Serie 1A',symbol:'BPY26',type:'stock',cat:'Bono AR'},
+  {name:'BOPREAL Serie 2',symbol:'BPD27',type:'stock',cat:'Bono AR'},
+  {name:'BOPREAL Serie 3',symbol:'BPE29',type:'stock',cat:'Bono AR'},
+  {name:'Bono Buenos Aires 2037',symbol:'PBA37',type:'stock',cat:'Bono AR'},
+  {name:'Bono Córdoba 2027',symbol:'CO27',type:'stock',cat:'Bono AR'},
+  {name:'Bono Mendoza 2029',symbol:'PMO29',type:'stock',cat:'Bono AR'},
+  {name:'Letra LEDE Jun 2025',symbol:'S30J5L',type:'stock',cat:'Bono AR'},
+  {name:'Letra LEDE Sep 2025',symbol:'S30S5L',type:'stock',cat:'Bono AR'},
+  // === ACCIONES ARGENTINAS (28) ===
   {name:'Grupo Financiero Galicia',symbol:'GGAL',type:'stock',cat:'Acción AR'},
   {name:'Banco Macro',symbol:'BMA',type:'stock',cat:'Acción AR'},
   {name:'BBVA Argentina',symbol:'BBAR',type:'stock',cat:'Acción AR'},
   {name:'Grupo Supervielle',symbol:'SUPV',type:'stock',cat:'Acción AR'},
+  {name:'Banco de Valores',symbol:'VALO',type:'stock',cat:'Acción AR'},
+  {name:'Banco Patagonia',symbol:'BPAT',type:'stock',cat:'Acción AR'},
   {name:'YPF',symbol:'YPF',type:'stock',cat:'Acción AR'},
   {name:'Pampa Energía',symbol:'PAMP',type:'stock',cat:'Acción AR'},
   {name:'Central Puerto',symbol:'CEPU',type:'stock',cat:'Acción AR'},
@@ -1019,74 +1082,169 @@ const ASSETS_DB = [
   {name:'Mirgor',symbol:'MIRG',type:'stock',cat:'Acción AR'},
   {name:'Holcim Argentina',symbol:'HARG',type:'stock',cat:'Acción AR'},
   {name:'BYMA',symbol:'BYMA',type:'stock',cat:'Acción AR'},
-  {name:'Banco de Valores',symbol:'VALO',type:'stock',cat:'Acción AR'},
   {name:'Edenor',symbol:'EDN',type:'stock',cat:'Acción AR'},
   {name:'Metrogas',symbol:'METR',type:'stock',cat:'Acción AR'},
-  {name:'Banco Ciudad',symbol:'BCBA',type:'stock',cat:'Acción AR'},
-  // === CEDEARs / Acciones del exterior ===
+  {name:'Boldt',symbol:'BOLT',type:'stock',cat:'Acción AR'},
+  {name:'Havanna',symbol:'HAVA',type:'stock',cat:'Acción AR'},
+  {name:'Grupo Clarín',symbol:'GCLA',type:'stock',cat:'Acción AR'},
+  {name:'Cablevisión Holding',symbol:'CVH',type:'stock',cat:'Acción AR'},
+  {name:'San Miguel',symbol:'SAMI',type:'stock',cat:'Acción AR'},
+  // === CEDEARs (93) ===
   {name:'Apple',symbol:'AAPL',type:'stock',cat:'CEDEar'},
   {name:'Microsoft',symbol:'MSFT',type:'stock',cat:'CEDEar'},
-  {name:'Alphabet (Google)',symbol:'GOOGL',type:'stock',cat:'CEDEar'},
+  {name:'Alphabet A (Google)',symbol:'GOOGL',type:'stock',cat:'CEDEar'},
   {name:'Amazon',symbol:'AMZN',type:'stock',cat:'CEDEar'},
-  {name:'Tesla',symbol:'TSLA',type:'stock',cat:'CEDEar'},
   {name:'Meta (Facebook)',symbol:'META',type:'stock',cat:'CEDEar'},
   {name:'NVIDIA',symbol:'NVDA',type:'stock',cat:'CEDEar'},
+  {name:'Tesla',symbol:'TSLA',type:'stock',cat:'CEDEar'},
   {name:'Netflix',symbol:'NFLX',type:'stock',cat:'CEDEar'},
-  {name:'JPMorgan Chase',symbol:'JPM',type:'stock',cat:'CEDEar'},
-  {name:'Bank of America',symbol:'BAC',type:'stock',cat:'CEDEar'},
-  {name:'MercadoLibre',symbol:'MELI',type:'stock',cat:'CEDEar'},
-  {name:'Globant',symbol:'GLOB',type:'stock',cat:'CEDEar'},
-  {name:'Walt Disney',symbol:'DIS',type:'stock',cat:'CEDEar'},
-  {name:'Berkshire Hathaway',symbol:'BRK.B',type:'stock',cat:'CEDEar'},
-  {name:'Visa',symbol:'V',type:'stock',cat:'CEDEar'},
-  {name:'Johnson & Johnson',symbol:'JNJ',type:'stock',cat:'CEDEar'},
-  {name:'Coca-Cola',symbol:'KO',type:'stock',cat:'CEDEar'},
-  {name:'Exxon Mobil',symbol:'XOM',type:'stock',cat:'CEDEar'},
-  {name:'Walmart',symbol:'WMT',type:'stock',cat:'CEDEar'},
-  {name:'PayPal',symbol:'PYPL',type:'stock',cat:'CEDEar'},
   {name:'Intel',symbol:'INTC',type:'stock',cat:'CEDEar'},
   {name:'AMD',symbol:'AMD',type:'stock',cat:'CEDEar'},
+  {name:'Qualcomm',symbol:'QCOM',type:'stock',cat:'CEDEar'},
+  {name:'Oracle',symbol:'ORCL',type:'stock',cat:'CEDEar'},
   {name:'Salesforce',symbol:'CRM',type:'stock',cat:'CEDEar'},
+  {name:'Adobe',symbol:'ADBE',type:'stock',cat:'CEDEar'},
+  {name:'PayPal',symbol:'PYPL',type:'stock',cat:'CEDEar'},
   {name:'Uber',symbol:'UBER',type:'stock',cat:'CEDEar'},
   {name:'Airbnb',symbol:'ABNB',type:'stock',cat:'CEDEar'},
+  {name:'Coinbase',symbol:'COIN',type:'stock',cat:'CEDEar'},
   {name:'Spotify',symbol:'SPOT',type:'stock',cat:'CEDEar'},
-  {name:'Qualcomm',symbol:'QCOM',type:'stock',cat:'CEDEar'},
+  {name:'Snap',symbol:'SNAP',type:'stock',cat:'CEDEar'},
+  {name:'Roblox',symbol:'RBLX',type:'stock',cat:'CEDEar'},
+  {name:'Robinhood',symbol:'HOOD',type:'stock',cat:'CEDEar'},
+  {name:'Palantir',symbol:'PLTR',type:'stock',cat:'CEDEar'},
+  {name:'CrowdStrike',symbol:'CRWD',type:'stock',cat:'CEDEar'},
+  {name:'Datadog',symbol:'DDOG',type:'stock',cat:'CEDEar'},
+  {name:'Snowflake',symbol:'SNOW',type:'stock',cat:'CEDEar'},
+  {name:'Block (Square)',symbol:'SQ',type:'stock',cat:'CEDEar'},
+  {name:'JPMorgan Chase',symbol:'JPM',type:'stock',cat:'CEDEar'},
+  {name:'Bank of America',symbol:'BAC',type:'stock',cat:'CEDEar'},
+  {name:'Wells Fargo',symbol:'WFC',type:'stock',cat:'CEDEar'},
+  {name:'Goldman Sachs',symbol:'GS',type:'stock',cat:'CEDEar'},
+  {name:'Morgan Stanley',symbol:'MS',type:'stock',cat:'CEDEar'},
+  {name:'Citigroup',symbol:'C',type:'stock',cat:'CEDEar'},
+  {name:'Visa',symbol:'V',type:'stock',cat:'CEDEar'},
+  {name:'Mastercard',symbol:'MA',type:'stock',cat:'CEDEar'},
+  {name:'American Express',symbol:'AXP',type:'stock',cat:'CEDEar'},
+  {name:'Berkshire Hathaway B',symbol:'BRK.B',type:'stock',cat:'CEDEar'},
+  {name:'Blackstone',symbol:'BX',type:'stock',cat:'CEDEar'},
+  {name:'Charles Schwab',symbol:'SCHW',type:'stock',cat:'CEDEar'},
+  {name:'Johnson & Johnson',symbol:'JNJ',type:'stock',cat:'CEDEar'},
+  {name:'Pfizer',symbol:'PFE',type:'stock',cat:'CEDEar'},
+  {name:'Merck',symbol:'MRK',type:'stock',cat:'CEDEar'},
+  {name:'AbbVie',symbol:'ABBV',type:'stock',cat:'CEDEar'},
+  {name:'Eli Lilly',symbol:'LLY',type:'stock',cat:'CEDEar'},
+  {name:'Amgen',symbol:'AMGN',type:'stock',cat:'CEDEar'},
+  {name:'UnitedHealth',symbol:'UNH',type:'stock',cat:'CEDEar'},
+  {name:'Abbott Laboratories',symbol:'ABT',type:'stock',cat:'CEDEar'},
+  {name:'Medtronic',symbol:'MDT',type:'stock',cat:'CEDEar'},
+  {name:'Gilead Sciences',symbol:'GILD',type:'stock',cat:'CEDEar'},
+  {name:'Bristol-Myers Squibb',symbol:'BMY',type:'stock',cat:'CEDEar'},
+  {name:'Exxon Mobil',symbol:'XOM',type:'stock',cat:'CEDEar'},
+  {name:'Chevron',symbol:'CVX',type:'stock',cat:'CEDEar'},
+  {name:'ConocoPhillips',symbol:'COP',type:'stock',cat:'CEDEar'},
+  {name:'Schlumberger',symbol:'SLB',type:'stock',cat:'CEDEar'},
+  {name:'Occidental Petroleum',symbol:'OXY',type:'stock',cat:'CEDEar'},
+  {name:'BP',symbol:'BP',type:'stock',cat:'CEDEar'},
+  {name:'Coca-Cola',symbol:'KO',type:'stock',cat:'CEDEar'},
+  {name:'PepsiCo',symbol:'PEP',type:'stock',cat:'CEDEar'},
+  {name:"McDonald's",symbol:'MCD',type:'stock',cat:'CEDEar'},
+  {name:'Starbucks',symbol:'SBUX',type:'stock',cat:'CEDEar'},
+  {name:'Nike',symbol:'NKE',type:'stock',cat:'CEDEar'},
+  {name:'Walmart',symbol:'WMT',type:'stock',cat:'CEDEar'},
+  {name:'Costco',symbol:'COST',type:'stock',cat:'CEDEar'},
+  {name:'Home Depot',symbol:'HD',type:'stock',cat:'CEDEar'},
+  {name:'Target',symbol:'TGT',type:'stock',cat:'CEDEar'},
+  {name:'Procter & Gamble',symbol:'PG',type:'stock',cat:'CEDEar'},
+  {name:'Philip Morris',symbol:'PM',type:'stock',cat:'CEDEar'},
+  {name:'Lululemon',symbol:'LULU',type:'stock',cat:'CEDEar'},
+  {name:'Boeing',symbol:'BA',type:'stock',cat:'CEDEar'},
+  {name:'Caterpillar',symbol:'CAT',type:'stock',cat:'CEDEar'},
+  {name:'General Electric',symbol:'GE',type:'stock',cat:'CEDEar'},
+  {name:'Honeywell',symbol:'HON',type:'stock',cat:'CEDEar'},
+  {name:'3M',symbol:'MMM',type:'stock',cat:'CEDEar'},
+  {name:'Lockheed Martin',symbol:'LMT',type:'stock',cat:'CEDEar'},
+  {name:'Raytheon',symbol:'RTX',type:'stock',cat:'CEDEar'},
+  {name:'Deere & Company',symbol:'DE',type:'stock',cat:'CEDEar'},
+  {name:'Walt Disney',symbol:'DIS',type:'stock',cat:'CEDEar'},
+  {name:'Comcast',symbol:'CMCSA',type:'stock',cat:'CEDEar'},
+  {name:'AT&T',symbol:'T',type:'stock',cat:'CEDEar'},
+  {name:'Verizon',symbol:'VZ',type:'stock',cat:'CEDEar'},
+  {name:'MercadoLibre',symbol:'MELI',type:'stock',cat:'CEDEar'},
+  {name:'Globant',symbol:'GLOB',type:'stock',cat:'CEDEar'},
+  {name:'Petrobras',symbol:'PBR',type:'stock',cat:'CEDEar'},
+  {name:'Vale',symbol:'VALE',type:'stock',cat:'CEDEar'},
+  {name:'Itaú Unibanco',symbol:'ITUB',type:'stock',cat:'CEDEar'},
+  {name:'Bradesco',symbol:'BBD',type:'stock',cat:'CEDEar'},
+  {name:'Nubank',symbol:'NU',type:'stock',cat:'CEDEar'},
+  {name:'ASML',symbol:'ASML',type:'stock',cat:'CEDEar'},
+  {name:'Novo Nordisk',symbol:'NVO',type:'stock',cat:'CEDEar'},
+  {name:'SAP',symbol:'SAP',type:'stock',cat:'CEDEar'},
+  {name:'Shell',symbol:'SHEL',type:'stock',cat:'CEDEar'},
+  {name:'Toyota',symbol:'TM',type:'stock',cat:'CEDEar'},
+  {name:'Sony',symbol:'SONY',type:'stock',cat:'CEDEar'},
+  {name:'Taiwan Semiconductor',symbol:'TSM',type:'stock',cat:'CEDEar'},
+  {name:'Alibaba',symbol:'BABA',type:'stock',cat:'CEDEar'},
+  {name:'S&P 500 ETF (SPY)',symbol:'SPY',type:'stock',cat:'CEDEar'},
+  {name:'Nasdaq 100 ETF (QQQ)',symbol:'QQQ',type:'stock',cat:'CEDEar'},
+  {name:'Emerging Markets ETF (EEM)',symbol:'EEM',type:'stock',cat:'CEDEar'},
+  {name:'Gold ETF (GLD)',symbol:'GLD',type:'stock',cat:'CEDEar'},
+  {name:'Silver ETF (SLV)',symbol:'SLV',type:'stock',cat:'CEDEar'},
 ];
 
 let acItems = [];
+let acFilter = 'all';
+
+function onNameFocus(){
+  renderACPicker(document.getElementById('f-name').value.trim());
+}
 function onNameInput(){
   updatePreview();
-  const q = document.getElementById('f-name').value.trim().toLowerCase();
-  if(!q){closeACDropdown();return;}
-  acItems = ASSETS_DB.filter(a=>
-    a.name.toLowerCase().includes(q)||a.symbol.toLowerCase().includes(q)
-  ).slice(0,9);
-  if(!acItems.length){closeACDropdown();return;}
+  renderACPicker(document.getElementById('f-name').value.trim());
+}
+function setACFilter(cat){
+  acFilter = cat;
+  renderACPicker(document.getElementById('f-name').value.trim());
+}
+function renderACPicker(q){
+  let filtered = ASSETS_DB;
+  if(acFilter !== 'all') filtered = filtered.filter(a => a.cat === acFilter);
+  if(q){
+    const ql = q.toLowerCase();
+    filtered = filtered.filter(a => a.name.toLowerCase().includes(ql) || a.symbol.toLowerCase().includes(ql));
+  }
+  acItems = filtered.slice(0, 50);
+  const cats = ['all','Crypto','LECAP','Bono AR','Acción AR','CEDEar'];
   const dd = document.getElementById('ac-dropdown');
-  dd.innerHTML = acItems.map((a,i)=>
-    `<div class="ac-item" onmousedown="selectACItem(${i})">
-      <span class="ac-sym">${esc(a.symbol)}</span>
-      <span class="ac-name">${esc(a.name)}</span>
-      <span class="ac-cat">${esc(a.cat)}</span>
-    </div>`
-  ).join('');
+  const filterHTML = `<div class="ac-filters">${cats.map(c =>
+    `<button class="ac-filter-btn${acFilter===c?' active':''}" onmousedown="event.preventDefault();setACFilter('${c}')">${c==='all'?'Todos':c}</button>`
+  ).join('')}</div>`;
+  const listHTML = acItems.length
+    ? acItems.map((a,i) => `<div class="ac-item" onmousedown="selectACItem(${i})">
+        <span class="ac-sym">${esc(a.symbol)}</span>
+        <span class="ac-name">${esc(a.name)}</span>
+        <span class="ac-cat">${esc(a.cat)}</span>
+      </div>`).join('')
+    : '<div class="ac-empty">Sin resultados para esta búsqueda</div>';
+  dd.innerHTML = filterHTML + `<div class="ac-list">${listHTML}</div>`;
   dd.classList.add('open');
 }
 function selectACItem(idx){
   const item = acItems[idx];
-  if(!item)return;
+  if(!item) return;
   document.getElementById('f-name').value = item.name;
   document.getElementById('f-symbol').value = item.symbol;
   selectedType = item.type;
-  document.querySelectorAll('.type-opt').forEach(o=>o.classList.toggle('active',o.dataset.type===item.type));
+  document.querySelectorAll('.type-opt').forEach(o => o.classList.toggle('active', o.dataset.type === item.type));
   closeACDropdown();
   updatePreview();
-  setTimeout(()=>document.getElementById('f-ppc').focus(),50);
+  setTimeout(() => document.getElementById('f-ppc').focus(), 50);
 }
 function closeACDropdown(){
   document.getElementById('ac-dropdown').classList.remove('open');
+  acFilter = 'all';
 }
-document.getElementById('f-name').addEventListener('blur',()=>setTimeout(closeACDropdown,150));
+document.getElementById('f-name').addEventListener('blur', () => setTimeout(closeACDropdown, 150));
 
 /* ---------- master render ---------- */
 function render(){
